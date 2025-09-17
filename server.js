@@ -11,42 +11,15 @@ const cors = require('cors')
 const cron = require("node-cron");
 
 const prisma = new PrismaClient();
-const app = express();
+const app = express()
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Allow all origins in development, specific origins in production
-    if (process.env.NODE_ENV === 'development') {
-      return callback(null, true);
-    }
-    
-    // Add your frontend domains here
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      process.env.GATEWAY_URL,
-      // Add other allowed origins
-    ].filter(Boolean);
-    
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-forwarded-host', 'x-forwarded-proto', 'x-original-host']
-};
 
-app.use(cors(corsOptions))
+app.use(cors())
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const PORT  = process.env.PORT || 3000
-const HOST = process.env.HOST || "localhost"
+const HOST = process.env.HOST || "192.168.0.103"
 
 // Upload API (unchanged)
 app.post("/upload", (req, res, next) => {
@@ -124,12 +97,12 @@ app.post("/download/:id", async (req, res) => {
 
     // FIXED: Check if request is coming through gateway or directly
     const isFromGateway = req.headers['x-forwarded-host'] || 
-                          req.get('host') === 'localhost:4000' ||
+                          req.get('host') === '192.168.0.103:4000' ||
                           req.headers.referer?.includes('4000');
     
     // Use gateway URL if coming through gateway, otherwise direct backend URL
     const baseUrl = isFromGateway 
-      ? `${req.protocol}://${req.headers['x-forwarded-host'] || 'localhost:4000'}/api`
+      ? `${req.protocol}://${req.headers['x-forwarded-host'] || '192.168.0.103:4000'}/api`
       : `${req.protocol}://${req.get("host")}`;
 
     const downloadUrl = `${baseUrl}/file/${id}?passcode=${encodeURIComponent(passcode)}`;
@@ -245,4 +218,4 @@ cron.schedule("0 * * * *", async () => {
   }
 });
 
-app.listen(3000, () => console.log("🚀 Server running at http://localhost:3000"));
+app.listen(PORT, '0.0.0.0', () => console.log("🚀 Server running at http://0.0.0.0:"+PORT));
