@@ -12,7 +12,36 @@ const cron = require("node-cron");
 
 const prisma = new PrismaClient();
 const app = express();
-app.use(cors())
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all origins in development, specific origins in production
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Add your frontend domains here
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      process.env.GATEWAY_URL,
+      // Add other allowed origins
+    ].filter(Boolean);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-forwarded-host', 'x-forwarded-proto', 'x-original-host']
+};
+
+app.use(cors(corsOptions))
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
