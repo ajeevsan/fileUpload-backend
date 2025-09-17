@@ -62,7 +62,7 @@ app.post("/upload", (req, res, next) => {
 
       fs.unlinkSync(encryptedFilePath);
 
-      return res.json({ downloadUrl: `/download/${uploadId}` });
+      return res.json({ downloadUrl: `${uploadId}` });
     } catch (e) {
       console.error(e);
       res.status(500).json({ error: "Upload failed" });
@@ -93,8 +93,17 @@ app.post("/download/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid passcode" });
     }
 
-    // Return the direct download URL with proper filename
-    const downloadUrl = `${req.protocol}://${req.get("host")}/file/${id}?passcode=${encodeURIComponent(passcode)}`;
+    // FIXED: Check if request is coming through gateway or directly
+    const isFromGateway = req.headers['x-forwarded-host'] || 
+                          req.get('host') === 'localhost:4000' ||
+                          req.headers.referer?.includes('4000');
+    
+    // Use gateway URL if coming through gateway, otherwise direct backend URL
+    const baseUrl = isFromGateway 
+      ? `${req.protocol}://${req.headers['x-forwarded-host'] || 'localhost:4000'}/api`
+      : `${req.protocol}://${req.get("host")}`;
+
+    const downloadUrl = `${baseUrl}/file/${id}?passcode=${encodeURIComponent(passcode)}`;
 
     return res.status(200).json({
       downloadUrl: downloadUrl,
@@ -105,6 +114,11 @@ app.post("/download/:id", async (req, res) => {
     return res.status(500).json({ error: "Download failed" });
   }
 });
+app.get("/health", (req, res) => {
+  return res.status(200).json({
+    message: "Api is fine"
+  })
+})
 
 // GET endpoint to serve the actual decrypted file
 app.get("/file/:id", async (req, res) => {
